@@ -45,7 +45,7 @@ type Application struct {
 func New(name string, opts ...Option) *Application {
 	a := &Application{
 		name:            name,
-		logger:          defaultLogger{},
+		logger:          newDefaultLogger(name),
 		shutdownTimeout: 30 * time.Second,
 	}
 	for _, opt := range opts {

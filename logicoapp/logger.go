@@ -1,6 +1,11 @@
 package logicoapp
 
-import "log"
+import (
+	"context"
+
+	general_logger "github.com/gnemade360/go-logger/logicologger/general-logger"
+	logicologger "github.com/gnemade360/go-logger/logicologger"
+)
 
 type Logger interface {
 	Info(msg string, args ...any)
@@ -8,8 +13,10 @@ type Logger interface {
 	Debug(msg string, args ...any)
 }
 
-type defaultLogger struct{}
+func newDefaultLogger(name string) Logger {
+	return general_logger.NewGeneralLogger(context.Background(), name, nil)
+}
 
-func (defaultLogger) Info(msg string, args ...any)  { log.Printf("[INFO]  "+msg, args...) }
-func (defaultLogger) Error(msg string, args ...any) { log.Printf("[ERROR] "+msg, args...) }
-func (defaultLogger) Debug(msg string, args ...any) { log.Printf("[DEBUG] "+msg, args...) }
+func NewNoopLogger() logicologger.Logger {
+	return logicologger.NewNoopLogger()
+}

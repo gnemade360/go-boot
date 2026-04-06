@@ -13,7 +13,7 @@ func TestHookRegistry_StartFIFO(t *testing.T) {
 	r.addOnStart(func(_ context.Context) error { order = append(order, 2); return nil })
 	r.addOnStart(func(_ context.Context) error { order = append(order, 3); return nil })
 
-	err := r.runStartHooks(context.Background(), defaultLogger{})
+	err := r.runStartHooks(context.Background(), newDefaultLogger("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestHookRegistry_StopLIFO(t *testing.T) {
 	r.addOnStop(func(_ context.Context) error { order = append(order, 2); return nil })
 	r.addOnStop(func(_ context.Context) error { order = append(order, 3); return nil })
 
-	err := r.runStopHooks(context.Background(), defaultLogger{})
+	err := r.runStopHooks(context.Background(), newDefaultLogger("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestHookRegistry_StartStopsOnError(t *testing.T) {
 	r.addOnStart(func(_ context.Context) error { return errors.New("fail") })
 	r.addOnStart(func(_ context.Context) error { order = append(order, 3); return nil })
 
-	err := r.runStartHooks(context.Background(), defaultLogger{})
+	err := r.runStartHooks(context.Background(), newDefaultLogger("test"))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -69,7 +69,7 @@ func TestHookRegistry_StopCollectsAllErrors(t *testing.T) {
 	r.addOnStop(func(_ context.Context) error { return err1 })
 	r.addOnStop(func(_ context.Context) error { return err2 })
 
-	err := r.runStopHooks(context.Background(), defaultLogger{})
+	err := r.runStopHooks(context.Background(), newDefaultLogger("test"))
 	if !errors.Is(err, err1) {
 		t.Fatalf("expected err1 in joined error, got %v", err)
 	}
@@ -85,7 +85,7 @@ func TestHookRegistry_PanicRecovery_Start(t *testing.T) {
 		panic("boom")
 	})
 
-	err := r.runStartHooks(context.Background(), defaultLogger{})
+	err := r.runStartHooks(context.Background(), newDefaultLogger("test"))
 	if err == nil {
 		t.Fatal("expected error from panic recovery")
 	}
@@ -100,7 +100,7 @@ func TestHookRegistry_PanicRecovery_Stop(t *testing.T) {
 	r.addOnStop(func(_ context.Context) error { ran = true; return nil })
 	r.addOnStop(func(_ context.Context) error { panic("boom") })
 
-	err := r.runStopHooks(context.Background(), defaultLogger{})
+	err := r.runStopHooks(context.Background(), newDefaultLogger("test"))
 	if err == nil {
 		t.Fatal("expected error from panic recovery")
 	}
@@ -121,7 +121,7 @@ func TestHookRegistry_ErrorNotification(t *testing.T) {
 	hookErr := errors.New("start failed")
 	r.addOnStart(func(_ context.Context) error { return hookErr })
 
-	err := r.runStartHooks(context.Background(), defaultLogger{})
+	err := r.runStartHooks(context.Background(), newDefaultLogger("test"))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -140,7 +140,7 @@ func TestHookRegistry_ErrorHookPanicDoesNotPropagate(t *testing.T) {
 	})
 	r.addOnStart(func(_ context.Context) error { return errors.New("fail") })
 
-	err := r.runStartHooks(context.Background(), defaultLogger{})
+	err := r.runStartHooks(context.Background(), newDefaultLogger("test"))
 	if err == nil {
 		t.Fatal("expected error from start hook")
 	}
