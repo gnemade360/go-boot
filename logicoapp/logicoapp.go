@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -23,13 +22,13 @@ type LogiApp interface {
 type LogiAppEvents interface {
 	RegisterOnStart(h Hook)
 	RegisterOnStop(h Hook)
+	OnError(h ErrorHook)
 }
-
-type Option func(*Application)
 
 type Application struct {
 	name            string
 	hooks           hookRegistry
+	logger          Logger
 	done            chan struct{}
 	once            sync.Once
 	started         atomic.Bool
@@ -40,6 +39,7 @@ type Application struct {
 func New(name string, opts ...Option) *Application {
 	a := &Application{
 		name:            name,
+		logger:          defaultLogger{},
 		shutdownTimeout: 30 * time.Second,
 	}
 	for _, opt := range opts {
@@ -56,14 +56,18 @@ func (a *Application) RegisterOnStop(h Hook) {
 	a.hooks.addOnStop(h)
 }
 
+func (a *Application) OnError(h ErrorHook) {
+	a.hooks.addOnError(h)
+}
+
 func (a *Application) Start(ctx context.Context) (<-chan struct{}, error) {
 	if !a.started.CompareAndSwap(false, true) {
 		return nil, ErrAlreadyStarted
 	}
 
-	log.Printf("starting application: %s", a.name)
+	a.logger.Info("starting application: %s", a.name)
 
-	if err := a.hooks.runStartHooks(ctx); err != nil {
+	if err := a.hooks.runStartHooks(ctx, a.logger); err != nil {
 		a.started.Store(false)
 		return nil, fmt.Errorf("%w: %w", ErrStartHookFailed, err)
 	}
@@ -86,11 +90,11 @@ func (a *Application) Start(ctx context.Context) (<-chan struct{}, error) {
 func (a *Application) Shutdown(ctx context.Context) error {
 	var shutdownErr error
 	a.once.Do(func() {
-		log.Printf("shutting down application: %s", a.name)
+		a.logger.Info("shutting down application: %s", a.name)
 		if a.sigCh != nil {
 			signal.Stop(a.sigCh)
 		}
-		shutdownErr = a.hooks.runStopHooks(ctx)
+		shutdownErr = a.hooks.runStopHooks(ctx, a.logger)
 		close(a.done)
 	})
 	if ctx.Err() != nil {
