@@ -10,6 +10,10 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/gnemade360/go-config/configprovider"
+
+	gocli "github.com/gnemade360/go-cli"
 )
 
 type LogiApp interface {
@@ -34,6 +38,8 @@ type Application struct {
 	started         atomic.Bool
 	shutdownTimeout time.Duration
 	sigCh           chan os.Signal
+	configProvider  configprovider.Provider
+	command         *gocli.Command
 }
 
 func New(name string, opts ...Option) *Application {
@@ -107,6 +113,23 @@ func (a *Application) Run(ctx context.Context) error {
 	doneCh, err := a.Start(ctx)
 	if err != nil {
 		return err
+	}
+
+	if a.command != nil {
+		errCh := make(chan error, 1)
+		go func() {
+			errCh <- a.command.ExecuteContext(ctx)
+		}()
+
+		select {
+		case cmdErr := <-errCh:
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), a.shutdownTimeout)
+			defer cancel()
+			shutdownErr := a.Shutdown(shutdownCtx)
+			return errors.Join(cmdErr, shutdownErr)
+		case <-doneCh:
+			return nil
+		}
 	}
 
 	select {
