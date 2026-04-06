@@ -14,7 +14,11 @@ import (
 	"github.com/gnemade360/go-config/configprovider"
 
 	gocli "github.com/gnemade360/go-cli"
+	"github.com/gnemade360/logicoapp/logicoapp/internal/hooks"
 )
+
+type Hook = hooks.Hook
+type ErrorHook = hooks.ErrorHook
 
 type LogiApp interface {
 	Start(ctx context.Context) (<-chan struct{}, error)
@@ -31,7 +35,7 @@ type LogiAppEvents interface {
 
 type Application struct {
 	name            string
-	hooks           hookRegistry
+	hooks           *hooks.Registry
 	logger          Logger
 	done            chan struct{}
 	once            sync.Once
@@ -45,6 +49,7 @@ type Application struct {
 func New(name string, opts ...Option) *Application {
 	a := &Application{
 		name:            name,
+		hooks:           hooks.New(),
 		logger:          newDefaultLogger(name),
 		shutdownTimeout: 30 * time.Second,
 	}
@@ -55,15 +60,15 @@ func New(name string, opts ...Option) *Application {
 }
 
 func (a *Application) RegisterOnStart(h Hook) {
-	a.hooks.addOnStart(h)
+	a.hooks.AddOnStart(h)
 }
 
 func (a *Application) RegisterOnStop(h Hook) {
-	a.hooks.addOnStop(h)
+	a.hooks.AddOnStop(h)
 }
 
 func (a *Application) OnError(h ErrorHook) {
-	a.hooks.addOnError(h)
+	a.hooks.AddOnError(h)
 }
 
 func (a *Application) Start(ctx context.Context) (<-chan struct{}, error) {
@@ -73,7 +78,7 @@ func (a *Application) Start(ctx context.Context) (<-chan struct{}, error) {
 
 	a.logger.Info("starting application: %s", a.name)
 
-	if err := a.hooks.runStartHooks(ctx, a.logger); err != nil {
+	if err := a.hooks.RunStartHooks(ctx, a.logger); err != nil {
 		a.started.Store(false)
 		return nil, fmt.Errorf("%w: %w", ErrStartHookFailed, err)
 	}
@@ -100,7 +105,7 @@ func (a *Application) Shutdown(ctx context.Context) error {
 		if a.sigCh != nil {
 			signal.Stop(a.sigCh)
 		}
-		shutdownErr = a.hooks.runStopHooks(ctx, a.logger)
+		shutdownErr = a.hooks.RunStopHooks(ctx, a.logger)
 		close(a.done)
 	})
 	if ctx.Err() != nil {

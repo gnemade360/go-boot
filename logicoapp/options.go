@@ -32,9 +32,7 @@ func WithConfigProvider(p configprovider.Provider) Option {
 			configutil.Initialize(p)
 			return nil
 		}
-		a.hooks.mu.Lock()
-		a.hooks.onStart = append([]Hook{configHook}, a.hooks.onStart...)
-		a.hooks.mu.Unlock()
+		a.hooks.PrependOnStart(configHook)
 	}
 }
 
