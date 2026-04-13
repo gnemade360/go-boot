@@ -14,7 +14,7 @@ import (
 	"github.com/gnemade360/go-config/configprovider"
 
 	gocli "github.com/gnemade360/go-cli"
-	"github.com/gnemade360/logicoapp/logicoapp/internal/hooks"
+	"github.com/gnemade360/go-boot/logicoapp/internal/hooks"
 )
 
 type Hook = hooks.Hook

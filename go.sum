@@ -2,6 +2,8 @@ github.com/gnemade360/go-cli v0.1.0 h1:S3xWxcR1p0CdR8KivIjCU/AZtYjHA3vUVzkhFpzp7
 github.com/gnemade360/go-cli v0.1.0/go.mod h1:8pU1u/12yIa16bQ1b6oXnCXQv+Ns0rVU6Dw/dWtfMCg=
 github.com/gnemade360/go-config v0.1.3 h1:v+j93siweK/Nuos43k3Qso5PBfqc1IRS6c0GDRYMu1w=
 github.com/gnemade360/go-config v0.1.3/go.mod h1:mlX1Hyl4wDvJt259vINXU6JdxKuyYTQIblBphzxIVEI=
+github.com/gnemade360/go-logger v0.1.0 h1:lqIQUzw7GjxhA3bhMahWJQNXEFRB3k2TVD6epSw3BsU=
+github.com/gnemade360/go-logger v0.1.0/go.mod h1:A/ZN5F1bgYRZtvHNt5O3GR9yODSOGOLrwKBaO86+krc=
 github.com/gnemade360/go-map-navigator v0.1.0 h1:Dz7HJEoBwxvVTdeX2iDO3QCaEDuAoIKDSOuquwJIBdA=
 github.com/gnemade360/go-map-navigator v0.1.0/go.mod h1:oGHb9Ri+oODEtvIHq3+T8VUdiEYKlxKh0RZ8qpdqy90=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
