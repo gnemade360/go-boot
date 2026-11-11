@@ -13,8 +13,8 @@ import (
 
 	"github.com/gnemade360/go-config/configprovider"
 
-	gocli "github.com/gnemade360/go-cli"
 	"github.com/gnemade360/go-boot/logicoapp/internal/hooks"
+	gocli "github.com/gnemade360/go-cli"
 )
 
 type Hook = hooks.Hook
@@ -40,6 +40,7 @@ type Application struct {
 	done            chan struct{}
 	once            sync.Once
 	started         atomic.Bool
+	running         atomic.Bool
 	shutdownTimeout time.Duration
 	sigCh           chan os.Signal
 	configProvider  configprovider.Provider
@@ -51,6 +52,7 @@ func New(name string, opts ...Option) *Application {
 		name:            name,
 		hooks:           hooks.New(),
 		logger:          newDefaultLogger(name),
+		done:            make(chan struct{}),
 		shutdownTimeout: 30 * time.Second,
 	}
 	for _, opt := range opts {
@@ -83,9 +85,9 @@ func (a *Application) Start(ctx context.Context) (<-chan struct{}, error) {
 		return nil, fmt.Errorf("%w: %w", ErrStartHookFailed, err)
 	}
 
-	a.done = make(chan struct{})
 	a.sigCh = make(chan os.Signal, 1)
 	signal.Notify(a.sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	a.running.Store(true)
 
 	go func() {
 		select {
@@ -99,12 +101,14 @@ func (a *Application) Start(ctx context.Context) (<-chan struct{}, error) {
 }
 
 func (a *Application) Shutdown(ctx context.Context) error {
+	if !a.running.Load() {
+		return ErrNotStarted
+	}
+
 	var shutdownErr error
 	a.once.Do(func() {
 		a.logger.Info("shutting down application: %s", a.name)
-		if a.sigCh != nil {
-			signal.Stop(a.sigCh)
-		}
+		signal.Stop(a.sigCh)
 		shutdownErr = a.hooks.RunStopHooks(ctx, a.logger)
 		close(a.done)
 	})
