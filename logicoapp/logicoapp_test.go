@@ -277,3 +277,81 @@ func TestDone_ReturnsChannel(t *testing.T) {
 		t.Fatal("done channel should be closed after shutdown")
 	}
 }
+
+func TestShutdown_BeforeStart(t *testing.T) {
+	app := New("test")
+	stopped := false
+	app.RegisterOnStop(func(_ context.Context) error { stopped = true; return nil })
+
+	err := app.Shutdown(context.Background())
+	if !errors.Is(err, ErrNotStarted) {
+		t.Fatalf("expected ErrNotStarted, got %v", err)
+	}
+	if stopped {
+		t.Fatal("stop hook should not run before start")
+	}
+}
+
+func TestShutdown_BeforeStartThenStart(t *testing.T) {
+	app := New("test")
+	callCount := 0
+	app.RegisterOnStop(func(_ context.Context) error { callCount++; return nil })
+
+	app.Shutdown(context.Background())
+
+	doneCh, err := app.Start(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.Shutdown(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	select {
+	case <-doneCh:
+	case <-time.After(time.Second):
+		t.Fatal("done channel should be closed after shutdown")
+	}
+	if callCount != 1 {
+		t.Fatalf("expected stop hook called once, got %d", callCount)
+	}
+}
+
+func TestShutdown_DuringStartHook(t *testing.T) {
+	app := New("test")
+	var shutdownErr error
+	app.RegisterOnStart(func(_ context.Context) error {
+		shutdownErr = app.Shutdown(context.Background())
+		return nil
+	})
+
+	_, err := app.Start(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Shutdown(context.Background())
+
+	if !errors.Is(shutdownErr, ErrNotStarted) {
+		t.Fatalf("expected ErrNotStarted, got %v", shutdownErr)
+	}
+}
+
+func TestDone_BeforeStart(t *testing.T) {
+	app := New("test")
+	doneCh := app.Done()
+	if doneCh == nil {
+		t.Fatal("expected non-nil done channel before start")
+	}
+
+	_, err := app.Start(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.Shutdown(context.Background())
+
+	select {
+	case <-doneCh:
+	case <-time.After(time.Second):
+		t.Fatal("done channel obtained before start should close after shutdown")
+	}
+}
